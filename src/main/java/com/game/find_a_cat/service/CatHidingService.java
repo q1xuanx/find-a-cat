@@ -4,24 +4,26 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
-import java.util.random.RandomGenerator;
 
 @Service
 @Slf4j
 public class CatHidingService {
 
-    private final RandomGenerator rng = RandomGenerator.of("Xoshiro256PlusPlus");
+    private final CatPositionGenerateService catPosService;
 
     private int n;
     private int winTurn;
     private int[][] board;
 
-    public CatHidingService() {
+    public CatHidingService(CatPositionGenerateService catPosService) {
+        this.catPosService = catPosService;
+
         n = 3;
         winTurn = 0;
         board = new int[n][n];
+
         Arrays.fill(board[0], 0);
-        generateIndexOfCat(board);
+        assignCatIndex();
     }
 
     // winTurn = 0, n = 3
@@ -31,12 +33,8 @@ public class CatHidingService {
     public boolean checkResult(int x, int y) {
         log.info("Checking result for x={} y={}", x, y);
         if (board[x][y] == 1) {
-            winTurn = (winTurn + 1) % 3;
-            if (winTurn == 0) {
-                n = 3;
-            } else {
-                n = (winTurn + 1) * (n + n);
-            }
+            winTurn = (winTurn + 1) % 4;
+            n = calculateN();
             reGenerateBoard(n);
             return true;
         }
@@ -44,20 +42,28 @@ public class CatHidingService {
     }
 
     public int getN() {
-        log.info("Current n={}", n);
+        log.info("Win turn {} current n={}", winTurn, n);
         return this.n;
     }
 
-    private void generateIndexOfCat(int[][] board) {
-        int x = rng.nextInt(0, board.length);
-        int y = rng.nextInt(0, board[0].length);
-        log.info("Generate index of cat {} {}", (x + 215), (y + 210));
-        board[x][y] = 1;
+    private int calculateN() {
+        log.info("Calculating n={} and win turn={}", n, winTurn);
+        if (winTurn == 0) {
+            n = 3;
+        } else {
+            n = winTurn * (n + n);
+        }
+        return n;
     }
 
     private void reGenerateBoard(int n) {
         this.board = new int[n][n];
         Arrays.fill(this.board[0], 0);
-        generateIndexOfCat(this.board);
+        assignCatIndex();
+    }
+
+    private void assignCatIndex() {
+        int[] pos = catPosService.generateIndexOfCat(n);
+        board[pos[0]][pos[1]] = 1;
     }
 }
